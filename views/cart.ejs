@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart</title>
+</head>
+<body>
+    <h1>Your Cart</h1>
+    <ul>
+        <% carts.forEach(Cart => { %>
+            <li><% if (Cart.Food_id) { %>
+                <%= Cart.Food_id.name %> - Quantity: <%= Cart.quantity %> - Price: <%= Cart.Food_id.price %> USD
+            <% } else { %>
+                Product not found
+            <% } %></li>
+        <% }); %>
+    </ul>
+    <p>Total Amount: <%= totalAmount %> USD</p>
+    
+    <form action="/order/" method="post">
+        <input type="hidden" name="items" value='<%= JSON.stringify(carts) %>'>
+    <input type="hidden" name="totalAmount" value="<%= totalAmount %>">
+        <button type="submit" ">Checkout</button>
+    </form>
+
+    <script>
+        function goToOrder() {
+            window.location.href = '';
+        }
+    </script>
+
+</body>
+</html>

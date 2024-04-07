@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang chủ</title>
+</head>
+<body>
+    <h1>Danh sách món ăn</h1>
+
+    <% if (!loggedIn) { %>
+        <!-- Hiển thị nút đăng nhập nếu người dùng chưa đăng nhập -->
+        <button onclick="goToLogin()">Đăng nhập</button>
+    <% } else { %>
+        <!-- Hiển thị tên người dùng nếu đã đăng nhập -->
+        <p>Xin chào, <%= username %>!</p>
+            <form action="/user/logout" method="post">
+                <button type="submit">Đăng xuất</button>
+            </form>
+    <% } %>
+
+    <% foods.forEach(Food => { %>
+        <div>
+            <h2><%= Food.name %></h2>
+            <p><%= Food.description %></p>
+            <p>Giá: <%= Food.price %></p>
+            <p>Image:<img src="<%=Food.image %>" alt="" width="200dp"></p>
+            <button onclick="addToCart('<%= Food._id %>')">Thêm vào giỏ hàng</button>
+        </div>
+    <% }); %>
+
+    <button onclick="goToCart()">Xem giỏ hàng</button>
+    <script>
+        function addToCart(foodId) {
+            fetch('/cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    //userId: 'userId', // Thay 'userId' bằng ID của người dùng
+                    foodId: foodId,
+                    quantity: 1 // Số lượng có thể thay đổi tùy thuộc vào giao diện người dùng
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function goToCart() {
+            window.location.href = '/cart';
+        }
+
+        function goToLogin() {
+            window.location.href = '/user/login';
+        }
+    </script>
+</body>
+</html>

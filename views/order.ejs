@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details</title>
+</head>
+<body>
+    <!-- Hiển thị thông tin đơn hàng -->
+    <h1>Order Details</h1>
+    <p>Order ID: <%= order.OrdersID %></p>
+    <p>User: <%= order.User.Name %></p>
+    <p>Date: <%= order.Date %></p>
+    <h2>Items:</h2>
+    <ul>
+        <% order.items.forEach(item => { %>
+            <li><%= item.name %> - Quantity: <%= item.quantity %> - Price: <%= item.price %> USD</li>
+        <% }); %>
+    </ul>
+    <p>Total Amount: <%= order.totalAmount %> USD</p>
+
+    <!-- Nút xác nhận và hủy -->
+    <form action="/order/confirm" method="post">
+        <button type="submit" name="action" value="confirm">Xác Nhận</button>
+        <button type="submit" name="action" value="cancel">Hủy</button>
+    </form>
+</body>
+</html>
