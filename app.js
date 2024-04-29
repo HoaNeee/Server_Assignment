@@ -9,13 +9,15 @@ const cartRouter = require('./routers/cartRouter');
 const userRouter = require('./routers/userRouter');
 const orderRouter = require('./routers/orderRouter');
 
+const path = require('path');
+
 const COMMON = require('./COMMON');
 const uri = COMMON.uri
 
 const app = express();
 
-app.use(express.json());
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(session({
     secret: 'sieuhoadz', // Chuỗi bí mật để ký và mã hóa cookie session
@@ -33,6 +35,8 @@ app.use('/',foodRouter);
 app.use('/user', userRouter);
 app.use('/cart',cartRouter);
 app.use('/order',orderRouter);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //app.set('view engine', 'ejs');
 

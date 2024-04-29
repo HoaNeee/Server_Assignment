@@ -1,10 +1,21 @@
 const mongoose = require('mongoose');
-const {v4 : uuidv4} = require('uuid')
+const {v4 : uuidv4} = require('uuid');
 
 const cartSchema = new mongoose.Schema({
+    CartID: {
+        type: String,
+        default: uuidv4,
+        required: true,
+        unique: true
+    },
     Food_id: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'food',
+        required: true
+    },
+    UserID:{
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'user',
         required: true
     },
     quantity: { 
@@ -16,7 +27,11 @@ const cartSchema = new mongoose.Schema({
     },
     priceFood: { 
         type: Number 
+    },
+    imageFood: {
+        type: String
     }
+    
 });
 
 const Cart = mongoose.model('cart', cartSchema);

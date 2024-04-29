@@ -4,59 +4,140 @@ const Order = require('../models/orderModel');
 const Cart = require('../models/cartModel')
 
 const { v4: uuidv4 } = require('uuid');
-const { default: mongoose } = require('mongoose');
+const User = require('../models/userModel');
 
 const router = express.Router();
+//GET 
+router.get('/', async(req, res) => {
+    // try {
+    //     const orders = await Order.find();
+        
+    //     res.json(orders);
+    // } catch (error) {
+    //     console.log(error);
+    //     res.status(500).json({message: error});
+    // }
 
-router.get('/:id', async (req, res) => {
+    const userId = req.header("userId");
     try {
-        // Lấy orderId từ URL
-        const orderId = req.params.id;
-
-        // Tìm đơn hàng trong cơ sở dữ liệu dựa trên orderId
-        const order = await Order.findById(orderId);
-
-        if (!order) {
-            // Nếu không tìm thấy đơn hàng, trả về lỗi 404
-            
-            return res.status(404).json({ message: 'Không tìm thấy đơn hàng' });
+        const orders = await Order.find({UserID: userId});
+        if(!orders || orders.length === 0){
+            return res.status(200).json([]);
         }
 
-        // Nếu tìm thấy đơn hàng, hiển thị trang xác nhận đơn hàng
-        res.render('order', { order: order });
+        res.status(200).json(orders);
     } catch (error) {
-        // Xử lý lỗi nếu có
-        console.error(error);
-        res.status(500).json({ message: 'Đã xảy ra lỗi khi tìm đơn hàng', error: error });
+        console.log(error);
+        res.status(500).json({message: error});
     }
 });
 
+//POST tạo đơn hàng
 router.post('/', async (req, res) => {
+    const userId = req.header("userId");
+
     try {
-        // Lấy dữ liệu từ body của yêu cầu
-        const { userId, items, totalAmount } = req.body;
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        }
 
-        const parsedItems = JSON.parse(items);
-
-        // Tạo một đơn hàng mới
-        const order = new Order({
+        // Lấy giỏ hàng của người dùng hiện tại
+        const carts = await Cart.find({ UserID: userId });
+        if (!carts || carts.length === 0) {
+            return res.status(404).json({ message: 'Không có giỏ hàng nào được tìm thấy.' });
+        }
+        
+        const orderItems = [];
+        let totalMoney = 0;
+        // Lặp qua danh sách các giỏ hàng và thêm các mục vào đơn hàng
+        carts.forEach(cart => {
+            orderItems.push({
+                nameFood: cart.nameFood,
+                quantity: cart.quantity
+            });
+            totalMoney += cart.priceFood
+        });
+        
+        // Tạo một đơn hàng mới bằng cách sao chép thông tin từ giỏ hàng
+        const newOrder = new Order({
             OrdersID: uuidv4(),
-            Users_id: userId, // Thêm người dùng vào đơn hàng
-            total_money: totalAmount, // Thêm tổng số tiền vào đơn hàng
-            items:parsedItems, // Thêm các mặt hàng vào đơn hàng (chuyển đổi từ JSON sang JavaScript object)
+            OrderID: uuidv4(),
+            UserID: userId,
+            nameUser: user.Name,
+            phoneUser: user.Phone,
+            addressUser: user.Address,
+            Date: new Date(),
+            totalMoney: totalMoney,
+            items: orderItems,
+            status: 0 // Trạng thái mặc định của đơn hàng (chưa thanh toán)
         });
 
         // Lưu đơn hàng vào cơ sở dữ liệu
+        const savedOrder = await newOrder.save();
+        res.status(201).json(savedOrder);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Đã xảy ra lỗi khi tạo đơn hàng.', error });
+    }
+});
+
+
+router.post('/confirm/:id', async (req, res) => {
+    const orderId = req.params.id;
+
+    try {
+        // Tìm đơn hàng dựa trên ID
+        const order = await Order.findById(orderId);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+        }
+
+        order.status = 1;
         await order.save();
 
-        // Gửi phản hồi về cho client
-        // res.status(201).json({ message: 'Đã tạo đơn hàng thành công', order: order });
-        res.redirect('/order/' + order.id);
-       
+        res.status(200).json(order);
     } catch (error) {
-        // Nếu có lỗi xảy ra, gửi phản hồi về client với thông báo lỗi
         console.error(error);
-        res.status(500).json({ message: 'Đã xảy ra lỗi khi đặt hàng', error: error });
+        res.status(500).json({ message: 'Đã xảy ra lỗi khi xác nhận đơn hàng.', error });
+    }
+});
+
+router.post('/cancel/:id', async (req, res) =>{
+
+    const orderId = req.params.id;
+
+    try {
+
+        const order = await Order.findById(orderId);
+ 
+        if (!order) {
+            return res.status(404).json({ message: 'Không tìm thấy đơn hàng.' });
+        }
+
+        order.status = 2;
+        await order.save();
+        res.status(200).json(order);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({message: 'Xảy ra lỗi khi hủy đơn hàng'});
+    }
+});
+
+router.post('/clear-cart', async (req, res) => {
+
+    const userId = req.header("userId");
+
+    try {
+        // Tìm và xóa tất cả các sản phẩm trong giỏ hàng của người dùng dựa trên userId
+        await Cart.deleteMany({ UserID: userId });
+
+        res.status(200).json({ message: 'Xóa các sản phẩm trong giỏ hàng thành công.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Đã xảy ra lỗi khi xóa sản phẩm trong giỏ hàng.', error });
     }
 });
 

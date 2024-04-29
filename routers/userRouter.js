@@ -1,9 +1,26 @@
 const express = require('express');
 const router = express.Router();
+
+const multer = require('multer');
+const path = require('path');
 const bcrypt = require('bcryptjs'); // Thư viện để mã hóa mật khẩu
 const User = require('../models/userModel'); // Import model User
 
 const { v4: uuidv4 } = require('uuid');
+
+// tai len hinh anh
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function(req, file, cb) {
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage
+});
 
 // Route để render trang đăng nhập
 router.get('/login', (req, res) => {
@@ -43,31 +60,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.get('/profile', async (req, res) => {
-    // try {
-    //     // Lấy thông tin người dùng từ cơ sở dữ liệu
-    //     const user = await User.findById(req.session.user._id);
 
-    //     if (!user) {
-    //         return res.status(404).json({ message: 'Không tìm thấy thông tin người dùng.' });
-    //     }
-    //     res.json(user);
-    //     console.log(req.session.user._id);
-        
-    // } catch (error) {
-    //     console.error(error);
-    //     res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy thông tin người dùng.', error });
-    // }
-});
-
-function authenticate (req, res, next) {
-    if(!req.session.user){
-        res.status(401).json({message: 'người dùng chưa đăng nhập'});
-    }
-
-    req.user = req.session.user;
-    next();
-}
 
 // Route để render trang đăng ký
 router.get('/register', (req, res) => {
@@ -75,9 +68,9 @@ router.get('/register', (req, res) => {
 });
 
 // Route để xử lý yêu cầu đăng ký
-router.post('/register', async (req, res) => {
+router.post('/register', upload.single('avt') , async (req, res) => {
 
-    const { Name, Email, Password } = req.body;
+    const { Name, Email, Password, Phone, Address} = req.body;
 
     try {
         // Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu chưa
@@ -96,12 +89,17 @@ router.post('/register', async (req, res) => {
 
         const userID = uuidv4();
 
+        const imagePath = req.file ? req.file.filename: null;
+
         // Tạo một bản ghi mới cho người dùng
         user = new User({
             UserID: userID,
             Name: Name,
             Email: Email,
-            Password: hashedPassword
+            Password: hashedPassword,
+            Phone: Phone,
+            Address: Address,
+            ImageUser: imagePath
         });
 
 
@@ -116,24 +114,63 @@ router.post('/register', async (req, res) => {
     }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id',upload.single('avt'), async (req, res) => {
     try {
         const userId = req.params.id;
 
         const updatedUserInfo = req.body; 
+
+        const imagePath = req.file ? req.file.filename : null;
         // Tìm user theo ID
         const user = await User.findByIdAndUpdate(userId, updatedUserInfo,{new:true});
         if (!user) {
             return res.status(404).json({ message: 'Người dùng không tồn tại' });
         }
+
         // Cập nhật thông tin người dùng
         user.Name = updatedUserInfo.Name;
         user.Email = updatedUserInfo.Email;
-
+        user.Phone = updatedUserInfo.Phone;
+        user.Address = updatedUserInfo.Address;
+        user.ImageUser = imagePath;
         await user.save();
         
-        console.log(user);
-        res.status(200).json({ message: 'Cập nhật thông tin người dùng thành công' });
+        //console.log(user);
+        res.status(200).json(user);
+        //res.status(200).json({ message: 'Cập nhật thông tin người dùng thành công' });
+    } catch (error) {
+        console.error('Lỗi khi cập nhật thông tin người dùng:', error);
+        res.status(500).json({ message: 'Lỗi khi cập nhật thông tin người dùng' });
+    }
+});
+
+router.put('/without-image/:id', async (req, res) => {
+    
+    try {
+        const userId = req.params.id;
+
+        const updatedUserInfo = req.body; 
+
+        if (!updatedUserInfo.Name ) {
+            return res.status(404).json({ message: 'Vui lòng cung cấp tên.' });
+        }
+        else if(!updatedUserInfo.Email){
+            return res.status(404).json({ message: 'Vui lòng cung cấp email.' });
+        }
+        // Tìm user theo ID
+        const user = await User.findByIdAndUpdate(userId, {
+            Name: updatedUserInfo.Name,
+            Email: updatedUserInfo.Email,
+            Phone: updatedUserInfo.Phone,
+            Address: updatedUserInfo.Address,
+        }, { new: true });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Người dùng không tồn tại' });
+        }
+        //console.log(user);
+        res.status(200).json(user);
+        //res.status(200).json({ message: 'Cập nhật thông tin người dùng thành công' });
     } catch (error) {
         console.error('Lỗi khi cập nhật thông tin người dùng:', error);
         res.status(500).json({ message: 'Lỗi khi cập nhật thông tin người dùng' });
@@ -148,11 +185,34 @@ router.post('/logout', (req, res) => {
             res.status(500).json({ message: 'Đã xảy ra lỗi khi đăng xuất.' });
         } else {
             // Chuyển hướng người dùng đến trang đăng nhập sau khi đăng xuất thành công
-            res.redirect('/');
+            res.status(200).json({ message: 'Đã đăng xuất' });
         }
     });
 });
 
+router.get('/profile', async (req, res) => {
+    try {
+        // Lấy thông tin người dùng từ cơ sở dữ liệu
+        const user = await User.findById(req.session.user._id);
 
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy thông tin người dùng.' });
+        }
+        res.json(user);
+        console.log(req.session.user._id);
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Đã xảy ra lỗi khi lấy thông tin người dùng.', error });
+    }
+});
 
+function authenticate (req, res, next) {
+    if(!req.session.user){
+        res.status(401).json({message: 'người dùng chưa đăng nhập'});
+    }
+
+    req.user = req.session.user;
+    next();
+}
 module.exports = router;

@@ -23,7 +23,9 @@ const userSchema = new mongoose.Schema({
 
     Address: String,
 
-    Phone: String
+    Phone: String,
+
+    ImageUser: String
 
 });
 

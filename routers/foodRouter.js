@@ -7,14 +7,14 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const foods = await Food.find();
-        let loggedIn = false;
-        let username = '';
-        // Kiểm tra xem người dùng đã đăng nhập chưa
-        if (req.session.user) {
-            // Nếu đã đăng nhập, gán trạng thái đăng nhập và tên người dùng
-            loggedIn = true;
-            username = req.session.user.Name;
-        }
+        // let loggedIn = false;
+        // let username = '';
+        // // Kiểm tra xem người dùng đã đăng nhập chưa
+        // if (req.session.user) {
+        //     // Nếu đã đăng nhập, gán trạng thái đăng nhập và tên người dùng
+        //     loggedIn = true;
+        //     username = req.session.user.Name;
+        // }
         // Render trang chủ với dữ liệu tương ứng
         //res.render('index', { foods: foods, loggedIn: loggedIn, username: username });
         res.json(foods)
